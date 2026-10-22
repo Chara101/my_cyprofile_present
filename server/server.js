@@ -13,6 +13,8 @@ app.get('/api/hello', (req, res) => {
     });
 });
 
+
+
 // 啟動伺服器
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`API server running on port ${PORT}`);
