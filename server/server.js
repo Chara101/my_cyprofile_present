@@ -10,15 +10,8 @@ const PORT = 3000;
 app.use(express.json());
 
 // 建立資料庫並注入 API (依賴反轉)
-const recordStore = new SQLite(path.join(__dirname, 'data.db'));
+const recordStore = new SQLite(path.join(__dirname, 'sqlite', 'data.db'));
 app.use('/api/records', createRecordRouter(recordStore));
-
-// 建立 GET API
-app.get('/api/hello', (req, res) => {
-    res.json({
-        message: 'Hello from Node.js API'
-    });
-});
 
 // JSON 格式錯誤等請求錯誤處理
 app.use((err, req, res, next) => {
