@@ -188,11 +188,10 @@ class SQLite {
 
     // 條件刪除 (等值條件，不可為空以免誤刪全部)
     deleteWhere(where) {
-        const cond = this._pick(where);
-        const keys = Object.keys(cond);
-        if (!keys.length) throw new Error('deleteWhere requires at least one condition');
-        const sql = `DELETE FROM ${this.table} WHERE ${keys.map((k) => `${k} = @${k}`).join(' AND ')}`;
-        return this.db.prepare(sql).run(cond).changes;
+        const { clauses, params } = this._buildWhere(where);
+        if (!clauses.length) throw new Error('deleteWhere requires at least one condition');
+        const sql = `DELETE FROM ${this.table} WHERE ${clauses.join(' AND ')}`;
+        return this.db.prepare(sql).run(params).changes;
     }
 
     // 計數

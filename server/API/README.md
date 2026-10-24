@@ -10,9 +10,20 @@
 |---|---|---|
 | `id` | integer | 記錄 ID,自動產生 |
 | `questionName` | string | 題目名稱,**必填** |
-| `time` | string | 記錄時間,ISO 8601;新增時未提供則自動填入 |
-| `difficulty` | string \| null | 難度 |
+| `time` | string | 記錄時間,ISO 8601;新增時未提供則自動填入。一律正規化並回傳為 UTC(結尾 `Z`),例如傳 `2026-01-01T08:00:00+08:00` 會存成 `2026-01-01T00:00:00.000Z`。建議傳帶 `Z` 或時區偏移量的格式,沒有時區的輸入會依 JavaScript 解析規則處理 |
+| `difficulty` | string \| null | 難度,見下方「列舉值」 |
+| `type` | string | 題目類型,**必填**,見下方「列舉值」 |
+| `tags` | string[] | 題目標籤,0 個或多個,自訂、不限制內容;未提供為 `[]` |
 | `link` | string \| null | 題目連結 |
+
+### 列舉值
+
+`difficulty`、`type` 傳入時大小寫皆可,但**一律以小寫儲存與回傳**(例如傳 `WebExploitation`,回傳 `webexploitation`)。
+
+| 欄位 | 可用值 |
+|---|---|
+| `difficulty` | `Easy`、`Medium`、`Hard` |
+| `type` | `WebExploitation`、`ReverseEngineering`、`Forensics`、`BinaryExploitation`、`Cryptography`、`GeneralSkills`、`ArtificialIntelligence`、`Blockchain` |
 
 範例:
 
@@ -22,6 +33,8 @@
   "questionName": "Two Sum",
   "time": "2026-01-01T00:00:00Z",
   "difficulty": "easy",
+  "type": "generalskills",
+  "tags": ["array", "hash-table"],
   "link": "https://leetcode.com/problems/two-sum/"
 }
 ```
@@ -41,13 +54,21 @@
 
 ## 查詢全部
 
-`GET /api/records`
+`GET /api/records?type=&difficulty=&tag=`
 
+| 參數 | 說明 |
+|---|---|
+| `type` | 只回傳該題目類型,大小寫不分 |
+| `difficulty` | 只回傳該難度,大小寫不分 |
+| `tag` | 只回傳 `tags` 包含此標籤的記錄(區分大小寫) |
+
+- 參數皆為選填,可組合使用(AND)
 - 依 `id` 由小到大排序
 - 回應 `200`:記錄陣列
 
 ```bash
 curl http://localhost:3000/api/records
+curl "http://localhost:3000/api/records?type=WebExploitation&tag=sql"
 ```
 
 ---
@@ -60,8 +81,8 @@ curl http://localhost:3000/api/records
 
 | 參數 | 說明 |
 |---|---|
-| `from` | 起始時間(ISO 8601) |
-| `to` | 結束時間(ISO 8601) |
+| `from` | 起始時間(ISO 8601,會先正規化為 UTC 再比較) |
+| `to` | 結束時間(ISO 8601,會先正規化為 UTC 再比較) |
 
 - `from`、`to` 至少要給一個
 - 兩者都給時,`from` 不可晚於 `to`
@@ -80,8 +101,10 @@ curl "http://localhost:3000/api/records/range?from=2026-01-15T00:00:00Z&to=2026-
 | 欄位 | 必填 | 說明 |
 |---|---|---|
 | `questionName` | 是 | 非空字串 |
-| `time` | 否 | 合法日期字串,預設為目前時間 |
-| `difficulty` | 否 | |
+| `type` | 是 | 題目類型,見「列舉值」 |
+| `time` | 否 | 合法日期字串,預設為目前時間;儲存時轉為 UTC ISO 8601 |
+| `difficulty` | 否 | 難度,見「列舉值」,可為 `null` |
+| `tags` | 否 | 字串陣列,預設 `[]` |
 | `link` | 否 | |
 
 - 傳入的 `id` 會被忽略
@@ -90,7 +113,7 @@ curl "http://localhost:3000/api/records/range?from=2026-01-15T00:00:00Z&to=2026-
 ```bash
 curl -X POST http://localhost:3000/api/records \
   -H "Content-Type: application/json" \
-  -d '{"questionName":"Two Sum","difficulty":"easy"}'
+  -d '{"questionName":"Two Sum","type":"GeneralSkills","difficulty":"Easy","tags":["array"]}'
 ```
 
 ---
@@ -100,13 +123,14 @@ curl -X POST http://localhost:3000/api/records \
 `PUT /api/records/:id`
 
 - body 只需帶要修改的欄位(`id` 不可修改)
+- `type` 若有帶,不可為 `null`;`tags` 若有帶,會整個取代原本的標籤
 - 回應 `200`:更新後的記錄
 - `id` 不存在回 `404`
 
 ```bash
 curl -X PUT http://localhost:3000/api/records/1 \
   -H "Content-Type: application/json" \
-  -d '{"difficulty":"hard"}'
+  -d '{"difficulty":"Hard","tags":["array","two-pointers"]}'
 ```
 
 ---
@@ -157,6 +181,11 @@ curl -X DELETE http://localhost:3000/api/records \
 
 - `questionName is required`
 - `questionName must be a non-empty string`
+- `type is required`
+- `type must be one of: ...`
+- `difficulty must be one of: ...`
+- `tags must be an array of strings`
+- `tag must be a non-empty string`
 - `time must be a valid date string`
 - `from or to is required`
 - `from/to must be valid date strings`
