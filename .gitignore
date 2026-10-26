@@ -142,7 +142,7 @@ dist
 .svelte-kit
 
 # End of https://www.toptal.com/developers/gitignore/api/node
-.devcontainer
+
 ENVIRONMENT.md
 package-lock.json
 package.json

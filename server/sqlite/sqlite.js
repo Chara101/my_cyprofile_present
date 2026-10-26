@@ -1,5 +1,9 @@
 const Database = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
 const { Difficulty, Type } = require('./format');
+
+const DEFAULT_DB_PATH = path.join(__dirname, '..', 'db_source', 'data.db');
 
 // 解題記錄格式 (對應 format.js)
 const RECORD_COLUMNS = {
@@ -23,13 +27,16 @@ const JSON_COLUMNS = ['tags'];
 
 class SQLite {
     /**
-     * @param {string} dbPath 資料庫路徑，預設為記憶體資料庫
+     * @param {string} dbPath 資料庫路徑，預設為 server/db_source/data.db
      * @param {string} table 資料表名稱
      * @param {object} columns 欄位定義 { 欄位名: 'SQL型別' }，預設為解題記錄格式
      */
-    constructor(dbPath = ':memory:', table = 'record', columns = RECORD_COLUMNS) {
+    constructor(dbPath = DEFAULT_DB_PATH, table = 'record', columns = RECORD_COLUMNS) {
         this._assertIdentifier(table);
         Object.keys(columns).forEach((c) => this._assertIdentifier(c));
+        if (dbPath !== ':memory:') {
+            fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+        }
         this.db = new Database(dbPath);
         this.db.pragma('journal_mode = WAL');
         this.table = table;
