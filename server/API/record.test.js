@@ -83,12 +83,18 @@ describe('POST /', () => {
         ['缺少 questionName', { type: 'Forensics' }, 'questionName is required'],
         ['questionName 為空白', rec({ questionName: '  ' }), 'questionName is required'],
         ['questionName 非字串', rec({ questionName: 5 }), 'questionName is required'],
+        ['questionName 超過 50 字', rec({ questionName: 'a'.repeat(51) }), 'questionName must be at most 50 characters'],
+        ['questionName 含非法特殊符號', rec({ questionName: 'Two@Sum!' }), 'questionName contains invalid characters'],
         ['缺少 type', { questionName: 'x' }, 'type is required'],
         ['type 為 null', rec({ type: null }), 'type is required'],
         ['type 非法', rec({ type: 'nope' }), 'type must be one of'],
         ['difficulty 非法', rec({ difficulty: 'nope' }), 'difficulty must be one of'],
         ['tags 非陣列', rec({ tags: 'a' }), 'tags must be an array of strings'],
         ['tags 含非字串', rec({ tags: ['a', 1] }), 'tags must be an array of strings'],
+        ['tags 超過 10 個', rec({ tags: Array.from({ length: 11 }, (_, i) => `t${i}`) }), 'tags cannot exceed 10 items'],
+        ['tags 含空字串', rec({ tags: [''] }), 'each tag must be 1-20 characters'],
+        ['tags 單個超過 20 字', rec({ tags: ['a'.repeat(21)] }), 'each tag must be 1-20 characters'],
+        ['tags 含非法特殊符號或空白', rec({ tags: ['bad tag!'] }), 'tags contain invalid characters'],
         ['time 非法', rec({ time: 'not-a-date' }), 'time must be a valid date string'],
         ['time 非字串', rec({ time: 12345 }), 'time must be a valid date string'],
     ];
@@ -161,8 +167,12 @@ describe('GET /', () => {
 
 describe('GET /range', () => {
     beforeEach(async () => {
-        for (const t of ['2026-03-01T00:00:00Z', '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z']) {
-            await call('POST', '', rec({ time: t, questionName: t }));
+        for (const [t, name] of [
+            ['2026-03-01T00:00:00Z', 'Mar_2026'],
+            ['2026-01-01T00:00:00Z', 'Jan_2026'],
+            ['2026-02-01T00:00:00Z', 'Feb_2026'],
+        ]) {
+            await call('POST', '', rec({ time: t, questionName: name }));
         }
     });
     test('from + to 含頭尾,依 time 由小到大', async () => {
@@ -173,7 +183,7 @@ describe('GET /range', () => {
     test('混用時區:+08:00 的 from/to 與 Z 的資料正確比較', async () => {
         // 2026-02-01T08:00:00+08:00 == 2026-02-01T00:00:00Z
         const r = await call('GET', '/range?from=2026-02-01T08:00:00%2B08:00');
-        assert.deepEqual(r.body.map((x) => x.questionName), ['2026-02-01T00:00:00Z', '2026-03-01T00:00:00Z']);
+        assert.deepEqual(r.body.map((x) => x.questionName), ['Feb_2026', 'Mar_2026']);
     });
     test('混用時區:以 +08:00 寫入的資料也能被正確查到', async () => {
         await call('POST', '', rec({ time: '2026-02-15T08:00:00+08:00', questionName: 'tz' }));
@@ -251,10 +261,15 @@ describe('PUT /:id', () => {
     const bad = [
         ['questionName 為空', { questionName: '' }, 'questionName must be a non-empty string'],
         ['questionName 非字串', { questionName: 1 }, 'questionName must be a non-empty string'],
+        ['questionName 超過 50 字', { questionName: 'a'.repeat(51) }, 'questionName must be at most 50 characters'],
+        ['questionName 含非法特殊符號', { questionName: 'Bad#Name' }, 'questionName contains invalid characters'],
         ['type 為 null', { type: null }, 'type must be one of'],
         ['type 非法', { type: 'nope' }, 'type must be one of'],
         ['difficulty 非法', { difficulty: 'nope' }, 'difficulty must be one of'],
         ['tags 非字串陣列', { tags: [1] }, 'tags must be an array of strings'],
+        ['tags 超過 10 個', { tags: Array.from({ length: 11 }, (_, i) => `t${i}`) }, 'tags cannot exceed 10 items'],
+        ['tags 單個超過 20 字', { tags: ['a'.repeat(21)] }, 'each tag must be 1-20 characters'],
+        ['tags 含非法特殊符號', { tags: ['a@b'] }, 'tags contain invalid characters'],
         ['time 非法', { time: 'abc' }, 'time must be a valid date string'],
         ['time 為 null', { time: null }, 'time must be a valid date string'],
     ];

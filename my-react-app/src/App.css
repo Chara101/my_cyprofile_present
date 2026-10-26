@@ -33,6 +33,7 @@ button:disabled { opacity: .5; cursor: not-allowed; }
 .filters label, .form label { display: flex; flex-direction: column; gap: 4px; font-size: .85rem; }
 input, select { font: inherit; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 6px; background: #fff; }
 .toolbar { display: flex; gap: 12px; align-items: center; background: #fef3c7; padding: 8px 12px; border-radius: 8px; margin-top: 12px; }
+.offline-banner { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: #fffbeb; border: 1px solid #f59e0b; color: #92400e; padding: 10px 14px; border-radius: 8px; margin-top: 14px; font-size: .9rem; }
 
 .capsules { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .capsule { display: flex; gap: 14px; align-items: center; background: #fff; border: 2px solid transparent; border-radius: 999px; padding: 10px 20px; cursor: pointer; }
@@ -43,9 +44,19 @@ input, select { font: inherit; padding: 6px 8px; border: 1px solid #d1d5db; bord
 .c-diff { color: var(--c, #6b7280); font-weight: 600; }
 
 .form { display: flex; flex-direction: column; gap: 14px; max-width: 520px; }
+.field-group { display: flex; flex-direction: column; gap: 6px; font-size: .85rem; }
+.field-label { display: inline-block; }
+.char-hint { color: #6b7280; font-weight: normal; font-size: .78rem; }
+.field-error { color: #dc2626; font-size: .8rem; }
+.tag-input-row { display: flex; gap: 8px; }
+.tag-input-row input { flex: 1; }
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 .detail { display: grid; grid-template-columns: 110px 1fr; gap: 10px 16px; background: #fff; padding: 20px; border-radius: 10px; }
 .detail dt { color: #6b7280; } .detail dd { margin: 0; }
-.tag { display: inline-block; background: #e0e7ff; border-radius: 999px; padding: 2px 10px; margin-right: 6px; font-size: .85rem; }
+.tag { display: inline-flex; align-items: center; gap: 4px; background: #e0e7ff; border-radius: 999px; padding: 2px 10px; margin-right: 6px; font-size: .85rem; }
+.tag-editable { margin-right: 0; padding-right: 6px; }
+.tag-remove { border: none; background: transparent; padding: 0 2px; font-size: 1rem; line-height: 1; color: #4338ca; cursor: pointer; border-radius: 50%; }
+.tag-remove:hover { color: #dc2626; }
 
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; z-index: 10; }
 .dialog { background: #fff; border-radius: 12px; padding: 24px; min-width: 300px; max-width: 90vw; }

@@ -9,11 +9,11 @@
 | 欄位 | 型別 | 說明 |
 |---|---|---|
 | `id` | integer | 記錄 ID,自動產生 |
-| `questionName` | string | 題目名稱,**必填** |
+| `questionName` | string | 題目名稱,**必填**,長度 1–50 字,僅允許中英文、數字、空白、`_` 與 `-` |
 | `time` | string | 記錄時間,ISO 8601;新增時未提供則自動填入。一律正規化並回傳為 UTC(結尾 `Z`),例如傳 `2026-01-01T08:00:00+08:00` 會存成 `2026-01-01T00:00:00.000Z`。建議傳帶 `Z` 或時區偏移量的格式,沒有時區的輸入會依 JavaScript 解析規則處理 |
 | `difficulty` | string \| null | 難度,見下方「列舉值」 |
 | `type` | string | 題目類型,**必填**,見下方「列舉值」 |
-| `tags` | string[] | 題目標籤,0 個或多個,自訂、不限制內容;未提供為 `[]` |
+| `tags` | string[] | 題目標籤,最多 10 個;每個標籤長度 1–20 字,僅允許中英文、數字、`_` 與 `-`;未提供為 `[]` |
 | `link` | string \| null | 題目連結 |
 
 ### 列舉值
@@ -100,11 +100,11 @@ curl "http://localhost:3000/api/records/range?from=2026-01-15T00:00:00Z&to=2026-
 
 | 欄位 | 必填 | 說明 |
 |---|---|---|
-| `questionName` | 是 | 非空字串 |
+| `questionName` | 是 | 非空字串,長度 1–50 字,僅允許中英文、數字、空白、`_` 與 `-` |
 | `type` | 是 | 題目類型,見「列舉值」 |
 | `time` | 否 | 合法日期字串,預設為目前時間;儲存時轉為 UTC ISO 8601 |
 | `difficulty` | 否 | 難度,見「列舉值」,可為 `null` |
-| `tags` | 否 | 字串陣列,預設 `[]` |
+| `tags` | 否 | 字串陣列(最多 10 個,單個 1–20 字,僅允許中英文、數字、`_` 與 `-`),預設 `[]` |
 | `link` | 否 | |
 
 - 傳入的 `id` 會被忽略
@@ -181,10 +181,15 @@ curl -X DELETE http://localhost:3000/api/records \
 
 - `questionName is required`
 - `questionName must be a non-empty string`
+- `questionName must be at most 50 characters`
+- `questionName contains invalid characters (only letters, numbers, spaces, _ and - are allowed)`
 - `type is required`
 - `type must be one of: ...`
 - `difficulty must be one of: ...`
 - `tags must be an array of strings`
+- `tags cannot exceed 10 items`
+- `each tag must be 1-20 characters`
+- `tags contain invalid characters (only letters, numbers, _ and - are allowed)`
 - `tag must be a non-empty string`
 - `time must be a valid date string`
 - `from or to is required`

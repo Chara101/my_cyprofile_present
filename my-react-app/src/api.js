@@ -1,4 +1,5 @@
 const BASE = '/api/records'
+export const OFFLINE_MSG = '無法連線到伺服器'
 
 async function request(path, options = {}) {
   let res
@@ -8,15 +9,23 @@ async function request(path, options = {}) {
       ...options,
     })
   } catch {
-    throw new Error('無法連線到伺服器')
+    throw new Error(OFFLINE_MSG)
   }
   if (!res.ok) {
     let msg = `請求失敗 (${res.status})`
+    let hasJsonError = false
     try {
       const body = await res.json()
-      if (body.error) msg = body.error
+      if (body && body.error) {
+        msg = body.error
+        hasJsonError = true
+      }
     } catch {
       /* 無內容 */
+    }
+    // Vite proxy 在後端未啟動時會回傳無 JSON body 的 500/502/503/504
+    if (!hasJsonError && res.status >= 500) {
+      throw new Error(OFFLINE_MSG)
     }
     throw new Error(msg)
   }

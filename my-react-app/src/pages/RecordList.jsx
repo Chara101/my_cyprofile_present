@@ -26,9 +26,13 @@ export default function RecordList() {
   // 批量操作
   const [multi, setMulti] = useState(false)
   const [selected, setSelected] = useState(new Set())
+  // 連線狀態
+  const [connError, setConnError] = useState(null)
+  const [retrying, setRetrying] = useState(false)
 
   // 篩選交給後端:type/difficulty/tag 用 GET /,時間區間用 GET /range,兩者以 id 取交集
   const load = useCallback(async () => {
+    setRetrying(true)
     try {
       const list = await listRecords({ type: fType, difficulty: fDiff, tag: fTag.trim() })
       if (fFrom || fTo) {
@@ -38,10 +42,14 @@ export default function RecordList() {
       } else {
         setRecords(list)
       }
+      setConnError(null)
     } catch (e) {
-      await dialog.alert(`載入失敗:${e.message}`)
+      setRecords([])
+      setConnError(e.message)
+    } finally {
+      setRetrying(false)
     }
-  }, [dialog, fType, fDiff, fTag, fFrom, fTo])
+  }, [fType, fDiff, fTag, fFrom, fTo])
   useEffect(() => {
     load()
   }, [load])
@@ -97,6 +105,17 @@ export default function RecordList() {
           {multi ? '結束操作多個' : '操作多個'}
         </button>
       </nav>
+
+      {connError && (
+        <div className="offline-banner" role="status">
+          <span>
+            ⚠️ 目前無法連上後端伺服器（{connError}），暫時無法顯示記錄，您的既有資料並未遺失。
+          </span>
+          <button onClick={load} disabled={retrying}>
+            {retrying ? '連線中…' : '🔄 重新連線'}
+          </button>
+        </div>
+      )}
 
       {multi && (
         <div className="toolbar">

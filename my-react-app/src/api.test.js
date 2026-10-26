@@ -13,6 +13,11 @@ import {
 import {
   DIFFICULTIES,
   TYPES,
+  MAX_NAME_LENGTH,
+  MAX_TAG_LENGTH,
+  MAX_TAGS_COUNT,
+  validateQuestionName,
+  validateTag,
   fromLocalInput,
   toLocalInput,
 } from './constants.js'
@@ -74,6 +79,27 @@ describe('constants.js 與後端 format.js 對齊', () => {
     const iso = fromLocalInput('2026-05-01T12:30')
     assert.ok(iso.endsWith('Z'))
     assert.equal(toLocalInput(iso), '2026-05-01T12:30')
+  })
+
+  test('validateQuestionName 驗證題目名稱長度 (50字) 與用字限制', () => {
+    assert.equal(validateQuestionName('Two Sum 題目_01-A'), null)
+    assert.equal(validateQuestionName('a'.repeat(MAX_NAME_LENGTH)), null)
+    assert.match(validateQuestionName('   '), /請輸入題目名稱/)
+    assert.match(validateQuestionName('a'.repeat(MAX_NAME_LENGTH + 1)), /最多 50 字/)
+    assert.match(validateQuestionName('SQLi@101!'), /不能包含特殊符號/)
+  })
+
+  test('validateTag 驗證單個標籤長度 (20字)、數量上限 (10個)、重複與用字限制', () => {
+    assert.equal(validateTag('hash-table_01', []), null)
+    assert.equal(validateTag('資料結構_陣列-1', []), null)
+    assert.equal(validateTag('a'.repeat(MAX_TAG_LENGTH), []), null)
+    assert.match(validateTag('', []), /請輸入標籤內容/)
+    assert.match(validateTag('a'.repeat(MAX_TAG_LENGTH + 1), []), /最多 20 字/)
+    assert.match(validateTag('bad tag', []), /不能包含特殊符號或空白/)
+    assert.match(validateTag('tag@1', []), /不能包含特殊符號或空白/)
+    assert.match(validateTag('dup', ['dup']), /已存在/)
+    const tenTags = Array.from({ length: MAX_TAGS_COUNT }, (_, i) => `t${i}`)
+    assert.match(validateTag('new_tag', tenTags), /最多只能新增 10 個標籤/)
   })
 })
 
@@ -192,5 +218,23 @@ describe('api.js 與 server/API 端對端整合', () => {
         }),
       /from must not be later than to/,
     )
+  })
+
+  test('後端不可用 (網路連線拒絕或 Vite proxy 500/502) 時統一拋出無法連線到伺服器', async () => {
+    const prevFetch = globalThis.fetch
+    try {
+      globalThis.fetch = async () => {
+        throw new TypeError('fetch failed')
+      }
+      await assert.rejects(() => listRecords(), /無法連線到伺服器/)
+
+      globalThis.fetch = async () => new Response('Bad Gateway', { status: 502 })
+      await assert.rejects(() => listRecords(), /無法連線到伺服器/)
+
+      globalThis.fetch = async () => new Response('', { status: 500 })
+      await assert.rejects(() => listRecords(), /無法連線到伺服器/)
+    } finally {
+      globalThis.fetch = prevFetch
+    }
   })
 })

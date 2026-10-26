@@ -20,15 +20,43 @@ function createRecordRouter(store) {
         typeof v === 'string' && Object.values(enumObj).some((e) => e.toLowerCase() === v.toLowerCase());
     const enumMessage = (name, enumObj) => `${name} must be one of: ${Object.values(enumObj).join(', ')}`;
 
+    // 邊界條件與用字限制
+    const MAX_NAME_LENGTH = 50;
+    const MAX_TAG_LENGTH = 20;
+    const MAX_TAGS_COUNT = 10;
+    const VALID_NAME_REGEX = /^[\p{L}\p{N}_ -]+$/u;
+    const VALID_TAG_REGEX = /^[\p{L}\p{N}_-]+$/u;
+
+    const validateQuestionName = (name) => {
+        const s = name.trim();
+        if (s.length > MAX_NAME_LENGTH) return `questionName must be at most ${MAX_NAME_LENGTH} characters`;
+        if (!VALID_NAME_REGEX.test(s)) return 'questionName contains invalid characters (only letters, numbers, spaces, _ and - are allowed)';
+        return null;
+    };
+
     // 驗證 type / difficulty / tags，回傳錯誤訊息；通過回傳 null
-    // type 不可為 null；difficulty 可為 null；tags 必須為字串陣列
+    // type 不可為 null；difficulty 可為 null；tags 必須為字串陣列且符合數量、長度與字元限制
     const validateFields = (body) => {
         if (body.type !== undefined && !isEnum(Type, body.type)) return enumMessage('type', Type);
         if (body.difficulty !== undefined && body.difficulty !== null && !isEnum(Difficulty, body.difficulty)) {
             return enumMessage('difficulty', Difficulty);
         }
-        if (body.tags !== undefined && (!Array.isArray(body.tags) || !body.tags.every((t) => typeof t === 'string'))) {
-            return 'tags must be an array of strings';
+        if (body.tags !== undefined) {
+            if (!Array.isArray(body.tags) || !body.tags.every((t) => typeof t === 'string')) {
+                return 'tags must be an array of strings';
+            }
+            if (body.tags.length > MAX_TAGS_COUNT) {
+                return `tags cannot exceed ${MAX_TAGS_COUNT} items`;
+            }
+            for (const rawTag of body.tags) {
+                const t = rawTag.trim();
+                if (!t || t.length > MAX_TAG_LENGTH) {
+                    return `each tag must be 1-${MAX_TAG_LENGTH} characters`;
+                }
+                if (!VALID_TAG_REGEX.test(t)) {
+                    return 'tags contain invalid characters (only letters, numbers, _ and - are allowed)';
+                }
+            }
         }
         return null;
     };
@@ -73,6 +101,8 @@ function createRecordRouter(store) {
         if (typeof body.questionName !== 'string' || !body.questionName.trim()) {
             return res.status(400).json({ error: 'questionName is required' });
         }
+        const nameErr = validateQuestionName(body.questionName);
+        if (nameErr) return res.status(400).json({ error: nameErr });
         if (body.type === undefined || body.type === null) {
             return res.status(400).json({ error: 'type is required' });
         }
@@ -81,7 +111,12 @@ function createRecordRouter(store) {
         }
         const fieldError = validateFields(body);
         if (fieldError) return res.status(400).json({ error: fieldError });
-        const data = { ...body, time: normalizeTime(body.time ?? new Date().toISOString()) };
+        const data = {
+            ...body,
+            questionName: body.questionName.trim(),
+            ...(body.tags !== undefined ? { tags: body.tags.map((t) => t.trim()) } : {}),
+            time: normalizeTime(body.time ?? new Date().toISOString()),
+        };
         delete data.id;
         const id = store.create(data);
         res.status(201).json(store.getById(id));
@@ -101,8 +136,12 @@ function createRecordRouter(store) {
         const id = parseId(req.params.id);
         if (id === null) return res.status(400).json({ error: 'invalid id' });
         const body = req.body || {};
-        if (body.questionName !== undefined && (typeof body.questionName !== 'string' || !body.questionName.trim())) {
-            return res.status(400).json({ error: 'questionName must be a non-empty string' });
+        if (body.questionName !== undefined) {
+            if (typeof body.questionName !== 'string' || !body.questionName.trim()) {
+                return res.status(400).json({ error: 'questionName must be a non-empty string' });
+            }
+            const nameErr = validateQuestionName(body.questionName);
+            if (nameErr) return res.status(400).json({ error: nameErr });
         }
         if (body.time !== undefined && !isValidDate(body.time)) {
             return res.status(400).json({ error: 'time must be a valid date string' });
@@ -110,7 +149,13 @@ function createRecordRouter(store) {
         const fieldError = validateFields(body);
         if (fieldError) return res.status(400).json({ error: fieldError });
         if (!store.getById(id)) return res.status(404).json({ error: 'record not found' });
-        store.update(id, body.time !== undefined ? { ...body, time: normalizeTime(body.time) } : body);
+        const updates = {
+            ...body,
+            ...(body.questionName !== undefined ? { questionName: body.questionName.trim() } : {}),
+            ...(body.tags !== undefined ? { tags: body.tags.map((t) => t.trim()) } : {}),
+            ...(body.time !== undefined ? { time: normalizeTime(body.time) } : {}),
+        };
+        store.update(id, updates);
         res.json(store.getById(id));
     });
 

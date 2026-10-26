@@ -17,7 +17,9 @@ export default function RecordDetail({ id }) {
         if (r) setRecord(r)
         else dialog.alert('找不到此記錄').then(() => (window.location.hash = '#/records'))
       })
-      .catch((e) => dialog.alert(`載入失敗:${e.message}`))
+      .catch((e) =>
+        dialog.alert(`載入失敗:${e.message}`).then(() => (window.location.hash = '#/records')),
+      )
   }, [id, dialog])
 
   const onSubmit = async (data) => {
